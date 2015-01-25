@@ -1,14 +1,14 @@
 package org.articlezero.commandhelper;
 
-import org.bukkit.ChatColor;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 
-import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
 
 /**
  * @author ArticleZero
@@ -16,12 +16,12 @@ import java.util.Map;
  */
 public class Handler implements CommandExecutor, TabCompleter{
 
-    private Map<org.articlezero.commandhelper.Command, Method> commands = Parser.getCommands();
-    help go()
-    help hello test()
+    private Set<CmdData> commands = Parser.getCommands();
+
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        for(org.articlezero.commandhelper.Command command:commands.keySet()){
+        for(CmdData data:commands){
+            org.articlezero.commandhelper.Command command = data.getCmd();
             if(cmd.getName().equalsIgnoreCase(command.name())){
                 Information info = new Information(sender, args);
                 if(args.length > 0){
@@ -34,27 +34,42 @@ public class Handler implements CommandExecutor, TabCompleter{
                             index++;
                         }
                         if(!info.isPlayer() && !command.allowConsole()){
-                            info.sendMessage(ChatColor.RED + "This command can only be performed by players!");
+                            info.sendMessage(Lang.NOT_A_PLAYER.toString());
                             return true;
                         }
-                        if(!hasPermission(cs, command)){
-                            info.sendMessage(ChatColor.RED + "Error: You don't have permission!");
+                        if(!hasPermission(sender, command)){
+                            info.sendMessage(Lang.NO_PERMS.toString());
                             return true;
                         }
                         try{
-                            commands.get(command).invoke(CommandHandler.class.newInstance(), info);
+                            data.getMethod().invoke(data.getClazz().newInstance(), info);
                             return true;
                         }catch(Exception e){
-                            Bukkit.getServer().getLogger().log(Level.SEVERE, "[OITQ] A critical error occured when attempting to perform a command...");
+                            Bukkit.getServer().getLogger().log(Level.SEVERE, "A critical error occurred when attempting to perform a command, report to the author:");
                             e.printStackTrace();
                             return true;
                         }
                     }
-                }else{
-
+                } else{
+                    if(!info.isPlayer() && !command.allowConsole()){
+                        info.sendMessage(Lang.NOT_A_PLAYER.toString());
+                        return true;
+                    }
+                    if(!hasPermission(sender, command)){
+                        info.sendMessage(Lang.NO_PERMS.toString());
+                        return true;
+                    }
+                    try{
+                        data.getMethod().invoke(data.getClazz().newInstance(), info);
+                        return true;
+                    }catch(Exception e){
+                        Bukkit.getServer().getLogger().log(Level.SEVERE, "A critical error occurred when attempting to perform a command, report to the author:");
+                        e.printStackTrace();
+                        return true;
+                    }
                 }
                 if(!info.isPlayer() && !command.allowConsole()){
-                    info.sendMessage(ChatColor.RED + "This command can only be used by players!");
+                    info.sendMessage(Lang.NOT_A_PLAYER.toString());
                     return true;
                 }
             }
